@@ -1,0 +1,4 @@
+<resources>
+    <string name="app_name">Canlendar</string>
+    <string name="hello">Hello World, CalendarActivity!</string>
+</resources>
