@@ -8,5 +8,5 @@
         android:layout_width="46dp"
         android:layout_height="55dp"
         android:id="@+id/tvtext"/>
-    
+
 </LinearLayout>

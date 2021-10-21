@@ -8,21 +8,27 @@ import android.text.SpannableString;
 import android.text.Spanned;
 import android.text.style.RelativeSizeSpan;
 import android.text.style.StyleSpan;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.BaseAdapter;
 import android.widget.TextView;
 
+import androidx.annotation.Nullable;
+
+import com.swufestu.canlendar.Helper.Schedelue;
+import com.swufestu.canlendar.IO.DateTag;
 import com.swufestu.canlendar.IO.SceVO;
 import com.swufestu.canlendar.calendar.Lunnar;
 import com.swufestu.canlendar.calendar.Special;
 
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Date;
 
 public class CalendaView extends BaseAdapter {
-    private SceVO dao = null;
+    private Schedelue dao = null;
     private boolean isLeapyear = false;  //是否为闰年
     private int daysOfMonth = 0;      //某月的天数
     private int dayOfWeek = 0;        //具体某一天是星期几
@@ -58,19 +64,17 @@ public class CalendaView extends BaseAdapter {
     private String sch_year = "";
     private String sch_month = "";
     private String sch_day = "";
-    
-    public CalendaView(){
-        Date date = new Date();
-        sysDate = sdf.format(date);  //当期日期
-        sys_year = sysDate.split("-")[0];
-        sys_month = sysDate.split("-")[1];
-        sys_day = sysDate.split("-")[2];
 
-    }
+    public CalendaView(){
+    Date date = new Date();
+    sysDate = sdf.format(date);  //当期日期
+    sys_year = sysDate.split("-")[0];
+    sys_month = sysDate.split("-")[1];
+    sys_day = sysDate.split("-")[2];
+    this.context= context;
+}
 
     public CalendaView(Context context, Resources rs, int jumpMonth, int jumpYear, int year_c, int month_c, int day_c){
-        this();
-        this.context= context;
         sc = new Special();
         lc = new Lunnar();
         this.res = rs;
@@ -103,9 +107,90 @@ public class CalendaView extends BaseAdapter {
 
     }
 
+    public CalendaView(Context context,Resources rs,int year, int month, int day){
+        this();
+        this.context= context;
+        sc = new Special();
+        lc = new Lunnar();
+        this.res = rs;
+        currentYear = String.valueOf(year); //得到跳转到的年份
+        currentMonth = String.valueOf(month);  //得到跳转到的月份
+        currentDay = String.valueOf(day);  //得到跳转到的天
 
+        getCalendar(Integer.parseInt(currentYear),Integer.parseInt(currentMonth));
+    }
 
     private void getCalendar(int parseInt, int parseInt1) {
+        isLeapyear = sc.isLeapYear(parseInt);              //是否为闰年
+        daysOfMonth = sc.getDaysOfMonth(isLeapyear, parseInt1);  //某月的总天数
+        dayOfWeek = sc.getWeekdayOfMonth(parseInt, parseInt1);      //某月第一天为星期几
+        lastDaysOfMonth = sc.getDaysOfMonth(isLeapyear, parseInt1-1);  //上一个月的总天数
+        Log.d("DAY", isLeapyear+" ======  "+daysOfMonth+"  ============  "+dayOfWeek+"  =========   "+lastDaysOfMonth);
+        getweek(parseInt,parseInt1);
+    }
+
+    private void getweek(int year, int month) {
+        int j = 1;
+        int flag = 0;
+        String lunarDay = "";
+
+        //得到当前月的所有日程日期(这些日期需要标记)
+        dao = new Schedelue(context);
+        ArrayList<DateTag> dateTagList = dao.getTagDate(year,month);
+        if(dateTagList != null && dateTagList.size() > 0){
+            schDateTagFlag = new int[dateTagList.size()];
+        }
+
+        for (int i = 0; i < dayNumber.length; i++) {
+            // 周一
+            if(i<7){
+                dayNumber[i]=week[i]+"."+" ";
+            }
+            else if(i < dayOfWeek+7){  //前一个月
+                int temp = lastDaysOfMonth - dayOfWeek+1-7;
+                lunarDay = lc.getLunarDate(year, month-1, temp+i,false);
+                dayNumber[i] = (temp + i)+"."+lunarDay;
+            }else if(i < daysOfMonth + dayOfWeek+7){   //本月
+                String day = String.valueOf(i-dayOfWeek+1-7);   //得到的日期
+                lunarDay = lc.getLunarDate(year, month, i-dayOfWeek+1-7,false);
+                dayNumber[i] = i-dayOfWeek+1-7+"."+lunarDay;
+                //对于当前月才去标记当前日期
+                if(sys_year.equals(String.valueOf(year)) && sys_month.equals(String.valueOf(month)) && sys_day.equals(day)){
+                    //笔记当前日期
+                    currentFlag = i;
+                }
+
+                //标记日程日期
+                if(dateTagList != null && dateTagList.size() > 0){
+                    for(int m = 0; m < dateTagList.size(); m++){
+                        DateTag dateTag = dateTagList.get(m);
+                        int matchYear = dateTag.getYear();
+                        int matchMonth = dateTag.getMonth();
+                        int matchDay = dateTag.getDay();
+                        if(matchYear == year && matchMonth == month && matchDay == Integer.parseInt(day)){
+                            schDateTagFlag[flag] = i;
+                            flag++;
+                        }
+                    }
+                }
+
+                setShowYear(String.valueOf(year));
+                setShowMonth(String.valueOf(month));
+                setAnimalsYear(lc.animalsYear(year));
+                setLeapMonth(lc.leapMonth == 0?"":String.valueOf(lc.leapMonth));
+                setCyclical(lc.cyclical(year));
+            }else{   //下一个月
+                lunarDay = lc.getLunarDate(year, month+1, j,false);
+                dayNumber[i] = j+"."+lunarDay;
+                j++;
+            }
+        }
+
+        String abc = "";
+        for(int i = 0; i < dayNumber.length; i++){
+            abc = abc+dayNumber[i]+":";
+        }
+        Log.d("DAYNUMBER",abc);
     }
 
     @Override
@@ -124,32 +209,32 @@ public class CalendaView extends BaseAdapter {
     }
 
     @Override
-    public View getView(int i, View view, ViewGroup viewGroup) {
+    public View getView(int po, View view, ViewGroup viewGroup) {
         if(view== null){
             view = LayoutInflater.from(context).inflate(R.layout.canlendar_layout, null);
         }
         TextView textView = (TextView) view.findViewById(R.id.tvtext);
-        String d = dayNumber[i].split("\\.")[0];
-        String dv = dayNumber[i].split("\\.")[1];
+        String d = dayNumber[po].split("\\.")[0];
+        String dv = dayNumber[po].split("\\.")[1];
         //Typeface typeface = Typeface.createFromAsset(context.getAssets(), "fonts/Helvetica.ttf");
         //textView.setTypeface(typeface);
         SpannableString sp = new SpannableString(d+"\n"+dv);
         sp.setSpan(new StyleSpan(android.graphics.Typeface.BOLD), 0, d.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
         sp.setSpan(new RelativeSizeSpan(1.2f) , 0, d.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
         if(dv != null || dv != ""){
-            sp.setSpan(new RelativeSizeSpan(0.75f), d.length()+1, dayNumber[i].length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+            sp.setSpan(new RelativeSizeSpan(0.75f), d.length()+1, dayNumber[po].length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
         }
         //sp.setSpan(new ForegroundColorSpan(Color.MAGENTA), 14, 16, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
         textView.setText(sp);
         textView.setTextColor(Color.GRAY);
-        if(i<7){
+        if(po<7){
             //设置周
             textView.setTextColor(Color.BLACK);
             drawable = res.getDrawable(R.drawable.week_top);
             textView.setBackgroundDrawable(drawable);
         }
 
-        if (i < daysOfMonth + dayOfWeek+7 &&i >= dayOfWeek+7) {
+        if (po< daysOfMonth + dayOfWeek+7 &&po >= dayOfWeek+7) {
             // 当前月信息显示
             textView.setTextColor(Color.BLACK);// 当月字体设黑
             drawable = res.getDrawable(R.drawable.item);
@@ -165,7 +250,7 @@ public class CalendaView extends BaseAdapter {
                 }
             }
         }
-        if(currentFlag == i){
+        if(currentFlag == po){
             //设置当天的背景
             drawable = res.getDrawable(R.drawable.current_day_bgc);
             textView.setBackgroundDrawable(drawable);
@@ -173,4 +258,245 @@ public class CalendaView extends BaseAdapter {
         }
         return view;
     }
+
+
+    public void setAnimalsYear(String animalsYear) {
+        this.animalsYear = animalsYear;
+    }
+
+    public void setContext(Context context) {
+        this.context = context;
+    }
+
+    public void setCurrentYear(String currentYear) {
+        this.currentYear = currentYear;
+    }
+
+    public void setDao(Schedelue dao) {
+        this.dao = dao;
+    }
+
+    public void setCurrentMonth(String currentMonth) {
+        this.currentMonth = currentMonth;
+    }
+
+    public void setCurrentDay(String currentDay) {
+        this.currentDay = currentDay;
+    }
+
+    public void setCurrentFlag(int currentFlag) {
+        this.currentFlag = currentFlag;
+    }
+
+    public void setCyclical(String cyclical) {
+        this.cyclical = cyclical;
+    }
+
+    public void setDayNumber(String[] dayNumber) {
+        this.dayNumber = dayNumber;
+    }
+
+    public void setDayOfWeek(int dayOfWeek) {
+        this.dayOfWeek = dayOfWeek;
+    }
+
+    public void setDaysOfMonth(int daysOfMonth) {
+        this.daysOfMonth = daysOfMonth;
+    }
+
+    public void setDrawable(Drawable drawable) {
+        this.drawable = drawable;
+    }
+
+    public void setLastDaysOfMonth(int lastDaysOfMonth) {
+        this.lastDaysOfMonth = lastDaysOfMonth;
+    }
+
+    public void setLc(Lunnar lc) {
+        this.lc = lc;
+    }
+
+    public void setLeapyear(boolean leapyear) {
+        isLeapyear = leapyear;
+    }
+
+    public void setLeapMonth(String leapMonth) {
+        this.leapMonth = leapMonth;
+    }
+
+    public void setRes(Resources res) {
+        this.res = res;
+    }
+
+    public void setSc(Special sc) {
+        this.sc = sc;
+    }
+
+    public void setSch_year(String sch_year) {
+        this.sch_year = sch_year;
+    }
+
+    public void setSdf(SimpleDateFormat sdf) {
+        this.sdf = sdf;
+    }
+
+    public void setSch_day(String sch_day) {
+        this.sch_day = sch_day;
+    }
+
+    public void setSch_month(String sch_month) {
+        this.sch_month = sch_month;
+    }
+
+    public void setSchDateTagFlag(int[] schDateTagFlag) {
+        this.schDateTagFlag = schDateTagFlag;
+    }
+
+    public void setShowMonth(String showMonth) {
+        this.showMonth = showMonth;
+    }
+
+    public void setShowYear(String showYear) {
+        this.showYear = showYear;
+    }
+
+    public static void setWeek(String[] week) {
+        CalendaView.week = week;
+    }
+
+    public void setSys_day(String sys_day) {
+        this.sys_day = sys_day;
+    }
+
+    public void setSys_month(String sys_month) {
+        this.sys_month = sys_month;
+    }
+
+    public void setSys_year(String sys_year) {
+        this.sys_year = sys_year;
+    }
+
+    public void setSysDate(String sysDate) {
+        this.sysDate = sysDate;
+    }
+
+    @Override
+    public void setAutofillOptions(@Nullable CharSequence... options) {
+        super.setAutofillOptions(options);
+    }
+
+    public Context getContext() {
+        return context;
+    }
+
+    public Drawable getDrawable() {
+        return drawable;
+    }
+
+    public int getCurrentFlag() {
+        return currentFlag;
+    }
+
+    public int getDayOfWeek() {
+        return dayOfWeek;
+    }
+
+    public int getDaysOfMonth() {
+        return daysOfMonth;
+    }
+
+    public int getLastDaysOfMonth() {
+        return lastDaysOfMonth;
+    }
+
+    public int[] getSchDateTagFlag() {
+        return schDateTagFlag;
+    }
+
+    public Lunnar getLc() {
+        return lc;
+    }
+
+    public Resources getRes() {
+        return res;
+    }
+
+    public Schedelue getDao() {
+        return dao;
+    }
+
+    public SimpleDateFormat getSdf() {
+        return sdf;
+    }
+
+    public Special getSc() {
+        return sc;
+    }
+
+    public String getAnimalsYear() {
+        return animalsYear;
+    }
+
+    public String getCurrentDay() {
+        return currentDay;
+    }
+
+    public String getCurrentMonth() {
+        return currentMonth;
+    }
+
+    public String getCurrentYear() {
+        return currentYear;
+    }
+
+    public String getCyclical() {
+        return cyclical;
+    }
+
+    public String getLeapMonth() {
+        return leapMonth;
+    }
+
+    public String getShowMonth() {
+        return showMonth;
+    }
+
+    public String getSch_day() {
+        return sch_day;
+    }
+
+    public String getSch_month() {
+        return sch_month;
+    }
+
+    public String getSch_year() {
+        return sch_year;
+    }
+
+    public String getShowYear() {
+        return showYear;
+    }
+
+    public String getSys_day() {
+        return sys_day;
+    }
+
+    public String getSys_month() {
+        return sys_month;
+    }
+
+    public String getSys_year() {
+        return sys_year;
+    }
+    public String getDateByClickItem(int position){
+        return dayNumber[position];
+    }
+    public int getStartPositon(){
+        return dayOfWeek+7;
+    }
+    public int getEndPosition(){
+        return  (dayOfWeek+daysOfMonth+7)-1;
+    }
+
+
 }

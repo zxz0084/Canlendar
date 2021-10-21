@@ -5,7 +5,10 @@
       <map>
         <entry key="..\:/AndroidStudioProjects/Canlendar/app/src/main/res/drawable-v24/ic_launcher_foreground.xml" value="0.1" />
         <entry key="..\:/AndroidStudioProjects/Canlendar/app/src/main/res/layout/activity_main.xml" value="0.264" />
-        <entry key="..\:/AndroidStudioProjects/Canlendar/app/src/main/res/layout/canlendar_layout.xml" value="0.11626139817629179" />
+        <entry key="..\:/AndroidStudioProjects/Canlendar/app/src/main/res/layout/calendar.xml" value="0.12335359675785208" />
+        <entry key="..\:/AndroidStudioProjects/Canlendar/app/src/main/res/layout/canlendar_layout.xml" value="0.2" />
+        <entry key="..\:/AndroidStudioProjects/Canlendar/app/src/main/res/layout/dialog_can.xml" value="0.2390625" />
+        <entry key="..\:/AndroidStudioProjects/Canlendar/app/src/main/res/layout/mydialog.xml" value="0.25364583333333335" />
         <entry key="..\:/AndroidStudioProjects/Canlendar/app/src/main/res/layout/rili.xml" value="0.1" />
       </map>
     </option>

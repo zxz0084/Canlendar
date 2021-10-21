@@ -10,6 +10,12 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.Canlendar">
         <activity
+            android:name=".ScheduleInfoView"
+            android:exported="true" />
+        <activity
+            android:name=".ScheduleView"
+            android:exported="true" />
+        <activity
             android:name=".MainActivity"
             android:exported="true">
             <intent-filter>
